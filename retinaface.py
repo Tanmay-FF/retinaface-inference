@@ -32,6 +32,8 @@ class RetinaFace:
         pre_nms_topk: int = 5000,
         post_nms_topk: int = 750,
         align_size: int = 112,
+        align_scale: float = 1.0,
+        align_shift_y: float = 0.0,
         device: str = "cpu",
     ) -> None:
         self.conf_threshold = conf_threshold
@@ -39,6 +41,8 @@ class RetinaFace:
         self.pre_nms_topk = pre_nms_topk
         self.post_nms_topk = post_nms_topk
         self.align_size = align_size
+        self.align_scale = align_scale
+        self.align_shift_y = align_shift_y
         self.device = torch.device(device)
 
         cv2.setNumThreads(1)
@@ -141,7 +145,7 @@ class RetinaFace:
         for det in dets:
             landmarks = det[5:15].reshape(5, 2)
             try:
-                aligned = norm_crop(image, landmarks, image_size=self.align_size)
+                aligned = norm_crop(image, landmarks, image_size=self.align_size, scale=self.align_scale, shift_y=self.align_shift_y)
             except Exception:
                 continue
             results.append({

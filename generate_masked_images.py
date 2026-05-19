@@ -284,6 +284,8 @@ def run_pipeline(args):
         conf_threshold=args.conf_threshold,
         nms_threshold=args.nms_threshold,
         align_size=args.align_size,
+        align_scale=args.align_scale,
+        align_shift_y=args.align_shift_y,
         device=args.device,
     )
     if args.device == 'cuda':
@@ -380,6 +382,16 @@ if __name__ == '__main__':
                         help="IoU threshold for Non-Maximum Suppression.")
     parser.add_argument('--align-size', type=int, default=112,
                         help="Side length of the square aligned crop.")
+    parser.add_argument('--align-scale', type=float, default=1.0,
+                        help="Zoom factor for the ArcFace destination template. "
+                             "< 1.0 zooms out (more padding / face context); "
+                             "> 1.0 zooms in (tighter crop). Default 1.0 = "
+                             "standard InsightFace behaviour.")
+    parser.add_argument('--align-shift-y', type=float, default=0.0,
+                        help="Vertical shift in output pixels applied to the "
+                             "ArcFace destination template. Positive = face moves "
+                             "UP (more chin visible); negative = face moves DOWN "
+                             "(more forehead visible). Default 0.0 = no shift.")
     parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'],
                         help="Run RetinaFace on cpu (default) or cuda.")
 

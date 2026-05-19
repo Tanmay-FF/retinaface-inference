@@ -102,21 +102,53 @@ def _umeyama_similarity(src: np.ndarray, dst: np.ndarray) -> np.ndarray:
     return M
 
 
-def estimate_norm(landmarks: np.ndarray, image_size: int = 112) -> np.ndarray:
+def estimate_norm(
+    landmarks: np.ndarray,
+    image_size: int = 112,
+    scale: float = 1.0,
+    shift_y: float = 0.0,
+) -> np.ndarray:
     """
     Return the 2x3 similarity matrix that maps the 5 detected landmarks onto
     the ArcFace canonical template at the requested image_size.
 
     Mirrors insightface.utils.face_align.estimate_norm.
+
+    Args:
+        landmarks: (5, 2) or length-10 (x, y) landmark coords.
+        image_size: side length of the square output crop.
+        scale: zoom factor applied to the destination template around its
+            centroid before fitting. Values < 1.0 zoom out (more padding /
+            face context visible); values > 1.0 zoom in (tighter crop).
+            Default 1.0 is the standard InsightFace / ArcFace behaviour.
+            Typical useful range: 0.85 – 1.15.
+        shift_y: vertical offset in output pixels added to all destination
+            template y-coordinates before fitting. Positive values shift the
+            face UP in the crop (more chin / neck visible at the bottom);
+            negative values shift it DOWN (more forehead visible at the top).
+            Default 0.0 = no shift. Typical useful range: -15 to +15.
     """
     landmarks = np.asarray(landmarks, dtype=np.float32).reshape(5, 2)
     if landmarks.shape != (5, 2):
         raise ValueError(f"landmarks must be (5, 2) or length 10, got {landmarks.shape}")
     dst = _get_arcface_dst(image_size)
+    if scale != 1.0 or shift_y != 0.0:
+        dst = dst.copy()
+        if scale != 1.0:
+            center = dst.mean(axis=0)
+            dst = center + (dst - center) * scale
+        if shift_y != 0.0:
+            dst[:, 1] += shift_y
     return _umeyama_similarity(landmarks, dst)
 
 
-def norm_crop(image: np.ndarray, landmarks: np.ndarray, image_size: int = 112) -> np.ndarray:
+def norm_crop(
+    image: np.ndarray,
+    landmarks: np.ndarray,
+    image_size: int = 112,
+    scale: float = 1.0,
+    shift_y: float = 0.0,
+) -> np.ndarray:
     """
     Crop and align a face using the ArcFace 5-point similarity warp.
     Mirrors insightface.utils.face_align.norm_crop.
@@ -127,11 +159,13 @@ def norm_crop(image: np.ndarray, landmarks: np.ndarray, image_size: int = 112) -
             emits (eye, eye, nose, mouth corner, mouth corner).
         image_size: side length of the square aligned crop. Must be a
             multiple of 112 (default) or 128.
+        scale: zoom factor for the destination template. See estimate_norm.
+        shift_y: vertical shift in output pixels. See estimate_norm.
 
     Returns:
         Aligned BGR crop, (image_size, image_size, 3), uint8.
     """
-    M = estimate_norm(landmarks, image_size=image_size)
+    M = estimate_norm(landmarks, image_size=image_size, scale=scale, shift_y=shift_y)
     # InsightFace uses the cv2 defaults (INTER_LINEAR, BORDER_CONSTANT, 0).
     return cv2.warpAffine(image, M, (image_size, image_size), borderValue=0.0)
 
