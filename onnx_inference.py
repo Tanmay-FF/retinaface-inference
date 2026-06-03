@@ -33,6 +33,10 @@ def parse_arguments():
                              'pass 0.02 to mirror the WiderFace AP convention).')
     parser.add_argument('--nms-threshold', type=float, default=0.4,
                         help='IoU threshold for Non-Maximum Suppression.')
+    parser.add_argument('--nist-1to1', action='store_true',
+                        help='Configure for the NIST 1:1 recognition test: '
+                             'forces --nms-threshold to 0.001 (overrides any '
+                             'explicitly passed --nms-threshold).')
     parser.add_argument('--image-directory', type=str, required=True,
                         help='Directory of input images (walked recursively).')
     parser.add_argument('--output-path', type=str, default='output',
@@ -46,7 +50,15 @@ def parse_arguments():
                         help='Side length of the square aligned crop.')
     parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'],
                         help='Run on cpu (default) or cuda.')
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    # NIST 1:1 recognition test needs almost all boxes kept through NMS so the
+    # downstream recognizer can be evaluated on every candidate face.
+    if args.nist_1to1:
+        args.conf_threshold = 0.95
+        args.nms_threshold = 0.001
+
+    return args
 
 
 def faces_to_array(faces):
