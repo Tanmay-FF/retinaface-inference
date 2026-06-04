@@ -132,6 +132,7 @@ Flags:
 | `--network`          | `retinaface`                   | Architecture the ONNX file was exported from (`retinaface`/`slim`/`rfb`). |
 | `--conf-threshold`   | `0.4`                          | Pre-NMS confidence cutoff. Use `0.02` to mirror WiderFace-AP convention.|
 | `--nms-threshold`    | `0.4`                          | IoU threshold for NMS.                                                  |
+| `--nist-1to1`        | off                            | NIST 1:1 recognition mode (one prominent face per image). See below.    |
 | `--image-directory`  | *(required)*                   | Input directory; walked recursively for `.jpg`, `.jpeg`, `.png`.        |
 | `--output-path`      | `output`                       | Output root.                                                            |
 | `-s / --save-image`  | off                            | Also save annotated images and aggregate `detections.json`.             |
@@ -140,6 +141,27 @@ Flags:
 
 Crops are saved unconditionally; only annotated images and
 `detections.json` are gated by `-s`.
+
+### NIST 1:1 mode (`--nist-1to1`)
+
+For NIST 1:1 verification testing we assume **each image contains
+exactly one prominent face** — the identity to be matched. Passing
+`--nist-1to1` configures the run for that assumption:
+
+- Overrides `--conf-threshold` to `0.95` and `--nms-threshold` to `0.0`
+  (overriding any values you pass explicitly).
+- After detection, keeps only the **single highest-confidence** face
+  per image and discards the rest, so each image yields at most one
+  `cropped/` + `aligned/` crop pair.
+
+```bash
+python onnx_inference.py \
+    --weights assets/models/retinaface.onnx \
+    --image-directory <input-dir> \
+    --output-path output \
+    --nist-1to1 \
+    -s
+```
 
 ---
 
@@ -405,9 +427,7 @@ There are exactly two confidence-related knobs:
   Anything below this is dropped before NMS sees it, so it never
   appears in `detections.json`, on the annotated image, or in
   `cropped/` / `aligned/`. Defaults:
-  - `0.4` here (deployment / FR pipeline default).
-  - `0.02` is the WiderFace AP-evaluation convention. Pass it
-    explicitly if you need that for benchmarking.
+  - `0.4` here (deployment / FR pipeline default)..
 - **`--nms-threshold`** — IoU threshold for NMS (default `0.4`).
 
 ---
