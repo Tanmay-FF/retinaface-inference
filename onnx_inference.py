@@ -56,7 +56,7 @@ def parse_arguments():
     # downstream recognizer can be evaluated on every candidate face.
     if args.nist_1to1:
         args.conf_threshold = 0.95
-        args.nms_threshold = 0.001
+        args.nms_threshold = 0.000
 
     return args
 
@@ -125,6 +125,11 @@ def process_image(model, image_path, args):
     faces = model.detect_and_align(image)
     time_taken = time.time() - start
 
+    # NIST 1:1: assume one prominent face per image. Keep only the single
+    # highest-confidence detection and discard the rest.
+    if args.nist_1to1 and faces:
+        faces = [max(faces, key=lambda f: f["score"])]
+
     detections = faces_to_array(faces)
     #print(detections)
 
@@ -140,7 +145,7 @@ def process_image(model, image_path, args):
 
 if __name__ == '__main__':
     args = parse_arguments()
-
+    print(args.conf_threshold, args.nms_threshold)
     model = RetinaFace(
         model_path=args.weights,
         network=args.network,
